@@ -19,31 +19,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ env.TAG }}
-      - name: Prepare the tag
+          fetch-depth: 0
+      
+      - name: Create and checkout branch from tag
         run: |
           git fetch --tags
+          git checkout -b release-prep-${{ env.TAG }} refs/tags/${{ env.TAG }}
           echo "TRIMMED_TAG=${TAG#v}" >> $GITHUB_ENV
           echo "TAG=${TAG%.*}" >> $GITHUB_ENV
+
       - name: Copy docs directory
         run: |
           mkdir -p docs/${TAG}
           cp -r docs/next/* docs/${TAG}
+      
       - name: Update site.start_page with new tag
         run: |
           sed -i "s|start_page:.*|start_page: ${TAG}@turtles:en:index.adoc|" turtles-gh-pages-playbook.yml
+      
       - name: Prepend new tag to start_paths
         run: |
           sed -i "s|start_paths: \[|start_paths: [docs/${TAG}, |" turtles-gh-pages-playbook.yml
+      
       - name: Change version in antora.yml
         run: |
           sed -i "s/^version: .*/version: $TAG/" docs/${TAG}/antora.yml
+      
       - name: Remove prerelease tag in antora.yml
         run: |
           sed -i '/prerelease/d' docs/$TAG/antora.yml
+      
       - name: Change display_version in antora.yml
         run: |
           sed -i "s/^display_version: .*/display_version: '$TAG'/"  docs/${TAG}/antora.yml
+      
+      - name: "Install updatecli"
+        uses: "updatecli/updatecli-action@v2"
+      
+      - name: Run Updatecli apply
+        run: "updatecli apply --config ./updatecli/updatecli.d --values ./updatecli/values.d/scm.yaml --debug"
+        env:
+          TAG: ${{ env.TAG }}
+          TRIMMED_TAG: ${{ env.TRIMMED_TAG }}
+      
       - name: Commit changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

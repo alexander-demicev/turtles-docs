@@ -1,0 +1,21 @@
+name: Bump ClusterClass version in docs for every new Turtles release
+
+scms:
+  turtles:
+    kind: git
+    spec:
+      url: "https://github.com/rancher/turtles-docs.git"
+      directory: "."
+      user: '{{ .scm.user }}'
+      email: '{{ .scm.email }}'
+      branch: '{{ .scm.branch }}'
+
+targets:
+  clusterClass:
+    name: 'Update ClusterClass in URLs'
+    kind: file
+    spec:
+      file: docs/{{ requiredEnv "TAG" }}/modules/en/pages/user/clusterclass.adoc
+      matchpattern: 'https://raw.githubusercontent.com/rancher/turtles/refs/heads/main/examples/(.+)'
+      replacepattern: 'https://raw.githubusercontent.com/rancher/turtles/refs/tags/v{{ requiredEnv "TRIMMED_TAG" }}/examples/\1'
+    scmid: turtles
